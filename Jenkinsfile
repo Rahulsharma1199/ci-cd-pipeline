@@ -4,7 +4,7 @@ pipeline {
   stages {
     stage('Checkout') { steps { checkout scm } }
     stage('Build') { steps { sh 'docker build -t $LOCAL_IMAGE .' } }
-    stage('Unit tests') { steps { sh 'docker run --rm $LOCAL_IMAGE pytest -q' } }
+    stage('Unit tests') { steps { sh 'docker run --rm $LOCAL_IMAGE pytest app/tests -q' } }
     stage('Tag & Push') {
       steps {
         withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
