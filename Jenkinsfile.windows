@@ -1,0 +1,33 @@
+pipeline {
+  agent any
+  environment { LOCAL_IMAGE = "flask-hello:${BUILD_NUMBER}" }
+  stages {
+    stage('Checkout') { steps { checkout scm } }
+    stage('Build') { steps { powershell 'docker build -t $env:LOCAL_IMAGE .' } }
+    stage('Unit tests') { steps { powershell 'docker run --rm $env:LOCAL_IMAGE pytest -q' } }
+    stage('Tag & Push') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+          powershell '''
+            echo $env:DOCKER_PASS | docker login -u $env:DOCKER_USER --password-stdin
+            docker tag $env:LOCAL_IMAGE $env:DOCKER_USER/flask-hello:$env:BUILD_NUMBER
+            docker tag $env:LOCAL_IMAGE $env:DOCKER_USER/flask-hello:latest
+            docker push $env:DOCKER_USER/flask-hello:$env:BUILD_NUMBER
+            docker push $env:DOCKER_USER/flask-hello:latest
+          '''
+        }
+      }
+    }
+    stage('Deploy') {
+      steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+          powershell '''
+            "IMAGE=$env:DOCKER_USER/flask-hello:latest" | Out-File -Encoding ascii -FilePath deploy/.env
+            docker compose -f deploy/docker-compose.yml pull
+            docker compose -f deploy/docker-compose.yml up -d
+          '''
+        }
+      }
+    }
+  }
+}

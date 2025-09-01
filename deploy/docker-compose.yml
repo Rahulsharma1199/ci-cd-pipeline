@@ -1,0 +1,7 @@
+version: "3.8"
+services:
+  web:
+    image: ${IMAGE:-your-dockerhub-username/flask-hello:latest}
+    ports:
+      - "5000:5000"
+    restart: unless-stopped
